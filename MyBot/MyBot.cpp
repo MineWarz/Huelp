@@ -8,12 +8,12 @@
  * scopes 'bot' and 'applications.commands', e.g.
  * https://discord.com/oauth2/authorize?client_id=940762342495518720&scope=bot+applications.commands&permissions=139586816064
  */
-const std::string    BOT_TOKEN    = "add your token here";
+const std::string    BOT_TOKEN    = "SAMPLE TOKEN";
 
 int main()
 {
 	/* Create bot cluster */
-	dpp::cluster bot(BOT_TOKEN);
+	dpp::cluster bot(BOT_TOKEN, dpp::i_default_intents | dpp::i_message_content);
 
 	/* Output simple log messages to stdout */
 	bot.on_log(dpp::utility::cout_logger());
@@ -23,7 +23,7 @@ int main()
 		/* Wrap command registration in run_once to make sure it doesnt run on every full reconnection */
 		if (dpp::run_once<struct register_bot_commands>()) {
 			std::vector<dpp::slashcommand> commands {
-				{ "ping", "Ping pong!", bot.me.id }
+				{ "ping", "Are you even online?", bot.me.id }
 			};
 
 			bot.global_bulk_command_create(commands);
@@ -36,6 +36,16 @@ int main()
 			co_await event.co_reply("Pong!");
 		}
 		co_return;
+	});
+
+	bot.on_message_create([&bot](const dpp::message_create_t& event) {
+		if (!event.msg.author.is_bot()) {
+			std::string msgContent = event.msg.content;
+			std::cout << "Found message: " << msgContent << std::endl;
+			if (std::find_if(msgContent.begin(), msgContent.end(), ::isdigit) != msgContent.end()) {
+				event.send("That message contains a number!");
+			}
+		}
 	});
 
 	/* Start the bot */
