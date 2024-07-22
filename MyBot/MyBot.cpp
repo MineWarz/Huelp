@@ -2,6 +2,8 @@
 #include <dpp/dpp.h>
 #include <regex>
 
+using namespace std;
+
 /* Be sure to place your token in the line below.
  * Follow steps here to get a token:
  * https://dpp.dev/creating-a-bot-application.html
@@ -9,7 +11,9 @@
  * scopes 'bot' and 'applications.commands', e.g.
  * https://discord.com/oauth2/authorize?client_id=940762342495518720&scope=bot+applications.commands&permissions=139586816064
  */
-const std::string    BOT_TOKEN    = "SAMPLE TOKEN";
+const string    BOT_TOKEN    = "SAMPLE TOKEN";
+int currentNumber = 0;
+bool valid = false;
 
 int main()
 {
@@ -23,7 +27,7 @@ int main()
 	bot.on_ready([&bot](const dpp::ready_t& event) {
 		/* Wrap command registration in run_once to make sure it doesnt run on every full reconnection */
 		if (dpp::run_once<struct register_bot_commands>()) {
-			std::vector<dpp::slashcommand> commands {
+			vector<dpp::slashcommand> commands {
 				{ "ping", "Are you even online?", bot.me.id }
 			};
 
@@ -51,14 +55,58 @@ int main()
 
 static void checkCount(const dpp::message_create_t& event) {
 	if (!event.msg.author.is_bot()) {
-		std::string const msgContent = event.msg.content;
-		std::cout << "Found message: " << msgContent << std::endl;
+		string const msgContent = event.msg.content;
+		cout << "Found message: " << msgContent << endl;
 
-		std::regex number("\\d+");
-		std::smatch match;
+		regex numberFormat("-?\\d+");
+		smatch match;
 
-		if (std::regex_search(msgContent.begin(), msgContent.end(), match, number)) {
-			std::cout << "match: " << match[0] << '\n';
+		if (regex_search(msgContent.begin(), msgContent.end(), match, numberFormat)) {
+			try {
+				int foundNumber = stoi(match[0]);
+				handleNumber(event, foundNumber);
+			}
+			catch (out_of_range const &e)
+			{
+				cout << e.what() << endl;
+				handleMistake(event, "Number out of range for integer!");
+				valid = false;
+			}
+		}
+		else {
+			handleMistake(event, "Message must contain a number!");
 		}
 	}
+}
+
+static void handleNumber(const dpp::message_create_t& event, int foundNumber) {
+	cout << "match: " << foundNumber << endl;
+	if (!valid) {
+		if (foundNumber == 0) {
+			valid = true;
+		} else {
+			handleMistake(event, "Next message must be 0!");
+		}
+	}
+	else {
+		if (!isValidNextNumber(foundNumber)) {
+			handleMistake(event, "Number must be 1 more or less than previous number!");
+		}
+	}
+
+	if (valid) {
+		currentNumber = foundNumber;
+		event.send(to_string(foundNumber));
+	}
+}
+
+static void handleMistake(const dpp::message_create_t& event, string userMessage)
+{
+	event.reply(dpp::message(userMessage));
+	valid = false;
+	currentNumber = 0;
+}
+
+static bool isValidNextNumber(int newNumber) {
+	return (newNumber == currentNumber + 1 || newNumber == currentNumber - 1);
 }

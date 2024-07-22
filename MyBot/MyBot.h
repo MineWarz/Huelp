@@ -15,3 +15,9 @@
 #endif
 
 static void checkCount(const dpp::message_create_t& event);
+
+static void handleNumber(const dpp::message_create_t& event, int foundNumber);
+
+static void handleMistake(const dpp::message_create_t& event, std::string userMessage);
+
+static bool isValidNextNumber(int newNumber);
