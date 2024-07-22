@@ -1,5 +1,6 @@
 #include "MyBot.h"
 #include <dpp/dpp.h>
+#include <regex>
 
 /* Be sure to place your token in the line below.
  * Follow steps here to get a token:
@@ -39,17 +40,25 @@ int main()
 	});
 
 	bot.on_message_create([&bot](const dpp::message_create_t& event) {
-		if (!event.msg.author.is_bot()) {
-			std::string msgContent = event.msg.content;
-			std::cout << "Found message: " << msgContent << std::endl;
-			if (std::find_if(msgContent.begin(), msgContent.end(), ::isdigit) != msgContent.end()) {
-				event.send("That message contains a number!");
-			}
-		}
+		checkCount(event);
 	});
 
 	/* Start the bot */
 	bot.start(dpp::st_wait);
 
 	return 0;
+}
+
+static void checkCount(const dpp::message_create_t& event) {
+	if (!event.msg.author.is_bot()) {
+		std::string const msgContent = event.msg.content;
+		std::cout << "Found message: " << msgContent << std::endl;
+
+		std::regex number("\\d+");
+		std::smatch match;
+
+		if (std::regex_search(msgContent.begin(), msgContent.end(), match, number)) {
+			std::cout << "match: " << match[0] << '\n';
+		}
+	}
 }
