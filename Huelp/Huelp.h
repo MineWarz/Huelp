@@ -14,10 +14,10 @@
 	#error "You must compile this template using its .sln file. You cannot just double click the .cpp file and compile it on its own. Ensure you checked out the full source code of the template!"
 #endif
 
-static void checkCount(const dpp::message_create_t& event);
+static void checkCount(dpp::cluster& bot, dpp::message_create_t const& event);
 
-static void handleNumber(const dpp::message_create_t& event, int foundNumber);
+static void handleNumber(dpp::cluster& bot, dpp::message_create_t const& event, int foundNumber);
 
-static void handleMistake(const dpp::message_create_t& event, std::string userMessage);
+static void handleMistake(dpp::message_create_t const& event, std::string userMessage);
 
 static bool isValidNextNumber(int newNumber);

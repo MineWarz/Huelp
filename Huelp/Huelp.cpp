@@ -1,5 +1,6 @@
 #include "Huelp.h"
 #include <dpp/dpp.h>
+#include <dpp/unicode_emoji.h>
 #include <regex>
 
 using namespace std;
@@ -44,7 +45,7 @@ int main()
 	});
 
 	bot.on_message_create([&bot](const dpp::message_create_t& event) {
-		checkCount(event);
+		checkCount(bot, event);
 	});
 
 	/* Start the bot */
@@ -53,7 +54,7 @@ int main()
 	return 0;
 }
 
-static void checkCount(const dpp::message_create_t& event) {
+static void checkCount(dpp::cluster& bot, dpp::message_create_t const& event) {
 	if (!event.msg.author.is_bot()) {
 		string const msgContent = event.msg.content;
 		cout << "Found message: " << msgContent << endl;
@@ -64,7 +65,7 @@ static void checkCount(const dpp::message_create_t& event) {
 		if (regex_search(msgContent.begin(), msgContent.end(), match, numberFormat)) {
 			try {
 				int foundNumber = stoi(match[0]);
-				handleNumber(event, foundNumber);
+				handleNumber(bot, event, foundNumber);
 			}
 			catch (out_of_range const &e)
 			{
@@ -79,7 +80,7 @@ static void checkCount(const dpp::message_create_t& event) {
 	}
 }
 
-static void handleNumber(const dpp::message_create_t& event, int foundNumber) {
+static void handleNumber(dpp::cluster &bot, const dpp::message_create_t& event, int foundNumber) {
 	cout << "match: " << foundNumber << endl;
 	if (!valid) {
 		if (foundNumber == 0) {
@@ -96,11 +97,24 @@ static void handleNumber(const dpp::message_create_t& event, int foundNumber) {
 
 	if (valid) {
 		currentNumber = foundNumber;
-		event.send(to_string(foundNumber));
+		string reaction;
+		switch (foundNumber) {
+			case 0: reaction = dpp::unicode_emoji::glowing_star;
+				break;
+			case 10: reaction = dpp::unicode_emoji::keycap_ten;
+				break;
+			case 100: reaction = dpp::unicode_emoji::_100;
+				break;
+			case 321: reaction = dpp::unicode_emoji::rocket;
+				break;
+			default: reaction = dpp::unicode_emoji::white_check_mark;
+				break;
+		}
+		bot.message_add_reaction(event.msg.id, event.msg.channel_id, reaction);
 	}
 }
 
-static void handleMistake(const dpp::message_create_t& event, string userMessage)
+static void handleMistake(dpp::message_create_t const& event, string userMessage)
 {
 	event.reply(dpp::message(userMessage));
 	valid = false;
