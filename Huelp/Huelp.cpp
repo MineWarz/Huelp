@@ -15,6 +15,7 @@ using namespace std;
 const string    BOT_TOKEN    = "SAMPLE TOKEN";
 int currentNumber = 0;
 bool valid = false;
+dpp::snowflake channel;
 
 int main()
 {
@@ -28,8 +29,19 @@ int main()
 	bot.on_ready([&bot](const dpp::ready_t& event) {
 		/* Wrap command registration in run_once to make sure it doesnt run on every full reconnection */
 		if (dpp::run_once<struct register_bot_commands>()) {
+
+			dpp::slashcommand setChannelCommand;
+
+			setChannelCommand.set_name("setchannel")
+				.set_description("Set the channel that the bot listens to.")
+				.set_application_id(bot.me.id)
+				.add_option(
+					dpp::command_option(dpp::co_channel, "channel", "The channel that the bot listens to.", true)
+				);
+
 			vector<dpp::slashcommand> commands {
-				{ "ping", "Are you even online?", bot.me.id }
+				{ "ping", "Are you even online?", bot.me.id },
+				setChannelCommand
 			};
 
 			bot.global_bulk_command_create(commands);
@@ -41,10 +53,17 @@ int main()
 		if (event.command.get_command_name() == "ping") {
 			co_await event.co_reply("Pong!");
 		}
+		else if (event.command.get_command_name() == "setchannel") {
+			channel = get<dpp::snowflake>(event.get_parameter("channel"));
+			co_await event.co_reply("Channel set.");
+		}
 		co_return;
 	});
 
 	bot.on_message_create([&bot](const dpp::message_create_t& event) {
+		if (channel == NULL || event.msg.channel_id != channel) {
+			return;
+		}
 		checkCount(bot, event);
 	});
 
