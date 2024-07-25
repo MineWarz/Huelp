@@ -18,6 +18,6 @@ static void checkCount(dpp::cluster& bot, dpp::message_create_t const& event);
 
 static void handleNumber(dpp::cluster& bot, dpp::message_create_t const& event, int foundNumber);
 
-static void handleMistake(dpp::message_create_t const& event, std::string userMessage);
+static void handleMistake(dpp::cluster& bot, dpp::message_create_t const& event, std::string userMessage);
 
 static bool isValidNextNumber(int newNumber);

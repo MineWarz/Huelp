@@ -27,21 +27,36 @@ int main()
 
 	/* Register slash command here in on_ready */
 	bot.on_ready([&bot](const dpp::ready_t& event) {
+		if (dpp::run_once<struct clear_bot_commands>()) {
+			/* Now, we're going to wipe our commands */
+			bot.global_bulk_command_delete();
+			/* This one requires a guild id, otherwise it won't know what guild's commands it needs to wipe! */
+			bot.guild_bulk_command_delete(800501701999853618);
+		}
+
 		/* Wrap command registration in run_once to make sure it doesnt run on every full reconnection */
 		if (dpp::run_once<struct register_bot_commands>()) {
 
 			dpp::slashcommand setChannelCommand;
-
-			setChannelCommand.set_name("setchannel")
+			setChannelCommand.set_name("set-channel")
 				.set_description("Set the channel that the bot listens to.")
 				.set_application_id(bot.me.id)
 				.add_option(
 					dpp::command_option(dpp::co_channel, "channel", "The channel that the bot listens to.", true)
 				);
 
+			dpp::slashcommand setNumberCommand;
+			setNumberCommand.set_name("set-number")
+				.set_description("Set a number to start the count with.")
+				.set_application_id(bot.me.id)
+				.add_option(
+					dpp::command_option(dpp::co_integer, "number", "The number that the count starts with.", true)
+				);
+
 			vector<dpp::slashcommand> commands {
 				{ "ping", "Are you even online?", bot.me.id },
-				setChannelCommand
+				setChannelCommand,
+				setNumberCommand
 			};
 
 			bot.global_bulk_command_create(commands);
@@ -53,9 +68,14 @@ int main()
 		if (event.command.get_command_name() == "ping") {
 			co_await event.co_reply("Pong!");
 		}
-		else if (event.command.get_command_name() == "setchannel") {
+		else if (event.command.get_command_name() == "set-channel") {
 			channel = get<dpp::snowflake>(event.get_parameter("channel"));
 			co_await event.co_reply("Channel set.");
+		}
+		else if (event.command.get_command_name() == "set-number") {
+			currentNumber = (int) get<int64_t>(event.get_parameter("number"));
+			valid = true;
+			co_await event.co_reply("Number set.");
 		}
 		co_return;
 	});
@@ -89,12 +109,12 @@ static void checkCount(dpp::cluster& bot, dpp::message_create_t const& event) {
 			catch (out_of_range const &e)
 			{
 				cout << e.what() << endl;
-				handleMistake(event, "Number out of range for integer!");
+				handleMistake(bot, event, "Number out of range for integer!");
 				valid = false;
 			}
 		}
 		else {
-			handleMistake(event, "Message must contain a number!");
+			handleMistake(bot, event, "Message must contain a number!");
 		}
 	}
 }
@@ -105,18 +125,27 @@ static void handleNumber(dpp::cluster &bot, const dpp::message_create_t& event, 
 		if (foundNumber == 0) {
 			valid = true;
 		} else {
-			handleMistake(event, "Next message must be 0!");
+			handleMistake(bot, event, "Next message must be 0!");
 		}
 	}
 	else {
 		if (!isValidNextNumber(foundNumber)) {
-			handleMistake(event, "Number must be 1 more or less than previous number!");
+			handleMistake(bot, event, "Number must be 1 more or less than previous number!");
 		}
 	}
 
 	if (valid) {
 		currentNumber = foundNumber;
 		string reaction;
+
+		if (foundNumber == 69) {
+			bot.message_add_reaction(event.msg.id, event.msg.channel_id, dpp::unicode_emoji::regional_indicator_n);
+			bot.message_add_reaction(event.msg.id, event.msg.channel_id, dpp::unicode_emoji::regional_indicator_i);
+			bot.message_add_reaction(event.msg.id, event.msg.channel_id, dpp::unicode_emoji::regional_indicator_c);
+			bot.message_add_reaction(event.msg.id, event.msg.channel_id, dpp::unicode_emoji::regional_indicator_e);
+			return;
+		}
+
 		switch (foundNumber) {
 			case 0: reaction = dpp::unicode_emoji::glowing_star;
 				break;
@@ -133,8 +162,9 @@ static void handleNumber(dpp::cluster &bot, const dpp::message_create_t& event, 
 	}
 }
 
-static void handleMistake(dpp::message_create_t const& event, string userMessage)
+static void handleMistake(dpp::cluster& bot, dpp::message_create_t const& event, string userMessage)
 {
+	bot.message_add_reaction(event.msg.id, event.msg.channel_id, dpp::unicode_emoji::cross_mark);
 	event.reply(dpp::message(userMessage));
 	valid = false;
 	currentNumber = 0;
